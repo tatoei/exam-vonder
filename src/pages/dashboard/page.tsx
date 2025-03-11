@@ -102,6 +102,13 @@ const DashboardPage: React.FC = () => {
       <hr className="w-3/4  border-gray-300 my-4 mx-auto" />
 
       {/* Button */}
+      <div className="flex justify-center">
+        <Button variant="facebook" size="default">
+          เพิ่มข้อมูลรายรับ - รายจ่าย
+        </Button>
+      </div>
+
+      {/* Table */}
     </div>
   );
 };
