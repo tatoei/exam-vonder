@@ -96,6 +96,12 @@ const DashboardPage: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Text */}
+      <div className='mt-5 text-xl flex justify-center font-bold'>ระบบบันทึกบัญชี รายรับ - รายจ่าย</div>
+      <hr className="w-3/4  border-gray-300 my-4 mx-auto" />
+
+      {/* Button */}
     </div>
   );
 };
