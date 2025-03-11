@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import React, { useState } from 'react';
-import { CiBitcoin } from "react-icons/ci";
+// import { CiBitcoin } from "react-icons/ci";
 import * as XLSX from "xlsx";
+
 
 // Types
 interface Transaction {
@@ -15,6 +17,7 @@ interface Transaction {
   expense: number;
   balance: number;
 }
+
 
 const transactionData = [
   {
@@ -40,6 +43,7 @@ const exportToExcel = () => {
   XLSX.writeFile(wb, "transactions.xlsx");
 };
 
+
 const DashboardPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [income, setIncome] = useState<number>(5000);
@@ -48,6 +52,7 @@ const DashboardPage: React.FC = () => {
   const [amount, setAmount] = useState<string>('');
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('income');
   const [userName, setUserName] = useState<string>('Sararawee');
+  const [showDialog, setShowDialog] = useState<boolean>(false); // State for dialog visibility
 
   // Calculate balance
   const balance = income - expenses;
@@ -82,6 +87,7 @@ const DashboardPage: React.FC = () => {
     setDescription('');
     setAmount('');
   };
+
 
   return (
     <div className="min-h-screen p-4">
@@ -167,6 +173,18 @@ const DashboardPage: React.FC = () => {
           Export Excel
         </Button>
       </div>
+
+      {/* Dialog */}
+      <Dialog>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Successful</DialogTitle>
+            <DialogDescription>
+              The transactions have been successfully exported to an Excel file.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
       <Table className='w-3/4 mx-auto mt-5'>
