@@ -4,7 +4,8 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from "xlsx";
 
 // Types
@@ -15,6 +16,15 @@ interface Transaction {
   income: string;
   expense: string;
   balance: string;
+}
+
+interface TransactionSummary {
+  totalIncome: number;
+  totalExpense: number;
+  netBalance: number;
+  transactionCount: number;
+  averageTransaction: number;
+  lastTransactionDate: string;
 }
 
 const DashboardPage: React.FC = () => {
@@ -45,6 +55,45 @@ const DashboardPage: React.FC = () => {
     amount: ''
   });
   const [userName, setUserName] = useState<string>('Sararawee');
+  const [summary, setSummary] = useState<TransactionSummary>({
+    totalIncome: 0,
+    totalExpense: 0,
+    netBalance: 0,
+    transactionCount: 0,
+    averageTransaction: 0,
+    lastTransactionDate: ''
+  });
+
+  // Calculate summary data
+  useEffect(() => {
+    const calculateSummary = () => {
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let transactionCount = transactionData.length;
+      let lastTransactionDate = transactionData.length > 0 ?
+        transactionData[transactionData.length - 1].date : '';
+
+      transactionData.forEach(transaction => {
+        totalIncome += parseFloat(transaction.income.replace('$', '')) || 0;
+        totalExpense += parseFloat(transaction.expense.replace('$', '')) || 0;
+      });
+
+      const netBalance = totalIncome - totalExpense;
+      const averageTransaction = transactionCount > 0 ?
+        (totalIncome + totalExpense) / transactionCount : 0;
+
+      setSummary({
+        totalIncome,
+        totalExpense,
+        netBalance,
+        transactionCount,
+        averageTransaction,
+        lastTransactionDate
+      });
+    };
+
+    calculateSummary();
+  }, [transactionData]);
 
   // Calculate current balance
   const getCurrentBalance = (): number => {
@@ -161,6 +210,47 @@ const DashboardPage: React.FC = () => {
 
       {/* Text */}
       <div className='mt-5 text-xl flex justify-center font-bold'>ระบบบันทึกบัญชี รายรับ - รายจ่าย</div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-3/4 mx-auto mt-6">
+        <Card className="bg-green-100 pb-2">
+          <CardHeader>
+            <CardTitle className="text-lg text-green-700">รายรับทั้งหมด</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-2xl font-bold text-green-600">${summary.totalIncome.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-red-100 pb-2">
+          <CardHeader>
+            <CardTitle className="text-lg text-red-700">รายจ่ายทั้งหมด</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-2xl font-bold text-red-600">${summary.totalExpense.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-blue-100 pb-2">
+          <CardHeader>
+            <CardTitle className="text-lg text-blue-700">คงเหลือสุทธิ </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className={`text-2xl font-bold ${summary.netBalance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              ${summary.netBalance.toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-purple-100 pb-2">
+          <CardHeader>
+            <CardTitle className="text-lg text-purple-700">จำนวนรายการ</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-2xl font-bold text-purple-600">{summary.transactionCount}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Search and Select */}
       <div className="flex justify-center items-center space-x-4 mb-4 mt-5">

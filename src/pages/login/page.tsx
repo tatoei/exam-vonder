@@ -92,7 +92,7 @@ const Login: React.FC = () => {
                     <CardDescription className="text-center">กรุณาเข้าสู่ระบบหรือลงทะเบียน</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-2">
                         <TabsList className="grid w-full grid-cols-2 mb-4 ">
                             <TabsTrigger value="login" className="flex items-center gap-2">
                                 <LogIn className="w-4 h-4" /> เข้าสู่ระบบ
@@ -295,7 +295,7 @@ const Login: React.FC = () => {
                         </Alert>
                     )}
                 </CardContent>
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex justify-center mt-2">
                     <p className="text-sm text-gray-500">
                         © 2025 ระบบลงทะเบียน
                     </p>
