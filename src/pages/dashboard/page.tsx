@@ -1,93 +1,148 @@
 import { Button } from '@/components/ui/button';
-// import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import React, { useState } from 'react';
-// import { CiBitcoin } from "react-icons/ci";
 import * as XLSX from "xlsx";
-
 
 // Types
 interface Transaction {
   id: string;
   date: string;
-  description: string;
-  income: number;
-  expense: number;
-  balance: number;
+  item: string;
+  income: string;
+  expense: string;
+  balance: string;
 }
 
-
-const transactionData = [
-  {
-    date: "01/01/2025",
-    item: "รายรับจากการขาย",
-    income: "$500.00",
-    expense: "$0.00",
-    balance: "$500.00"
-  },
-  {
-    date: "02/01/2025",
-    item: "ค่าใช้จ่ายการซื้อสินค้า",
-    income: "$0.00",
-    expense: "$200.00",
-    balance: "$300.00"
-  }
-];
-
-const exportToExcel = () => {
-  const ws = XLSX.utils.json_to_sheet(transactionData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-  XLSX.writeFile(wb, "transactions.xlsx");
-};
-
-
 const DashboardPage: React.FC = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [income, setIncome] = useState<number>(5000);
-  const [expenses, setExpenses] = useState<number>(1200);
-  const [description, setDescription] = useState<string>('');
-  const [amount, setAmount] = useState<string>('');
-  const [transactionType, setTransactionType] = useState<'income' | 'expense'>('income');
-  const [userName, setUserName] = useState<string>('Sararawee');
-  const [showDialog, setShowDialog] = useState<boolean>(false); // State for dialog visibility
+  const [transactionData, setTransactionData] = useState<Transaction[]>([
+    {
+      id: "1",
+      date: "01/01/2025",
+      item: "รายรับจากการขาย",
+      income: "$500.00",
+      expense: "$0.00",
+      balance: "$500.00"
+    },
+    {
+      id: "2",
+      date: "02/01/2025",
+      item: "ค่าใช้จ่ายการซื้อสินค้า",
+      income: "$0.00",
+      expense: "$200.00",
+      balance: "$300.00"
+    }
+  ]);
 
-  // Calculate balance
-  const balance = income - expenses;
+  const [open, setOpen] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    date: new Date().toISOString().split('T')[0],
+    item: '',
+    transactionType: 'income',
+    amount: ''
+  });
+  const [userName, setUserName] = useState<string>('Sararawee');
+
+  // Calculate current balance
+  const getCurrentBalance = (): number => {
+    if (transactionData.length === 0) return 0;
+    const lastTransaction = transactionData[transactionData.length - 1];
+    return parseFloat(lastTransaction.balance.replace('$', ''));
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewTransaction({
+      ...newTransaction,
+      [name]: value
+    });
+  };
+
+  // Handle transaction type change
+  const handleTransactionTypeChange = (value: string) => {
+    setNewTransaction({
+      ...newTransaction,
+      transactionType: value
+    });
+  };
 
   // Add new transaction
   const handleAddTransaction = () => {
-    if (!description || !amount || isNaN(Number(amount))) {
-      alert('Please enter a valid description and amount.');
+    if (!newTransaction.item || !newTransaction.amount || isNaN(Number(newTransaction.amount))) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง');
       return;
     }
 
-    const amountNumber = Number(amount);
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      description,
-      income: transactionType === 'income' ? amountNumber : 0,
-      expense: transactionType === 'expense' ? amountNumber : 0,
-      balance: transactionType === 'income' ? balance + amountNumber : balance - amountNumber,
-    };
+    const currentBalance = getCurrentBalance();
+    const amount = parseFloat(newTransaction.amount);
 
-    setTransactions([...transactions, newTransaction]);
+    let newBalance: number;
+    let incomeAmount = "$0.00";
+    let expenseAmount = "$0.00";
 
-    // Update total income or expense
-    if (transactionType === 'income') {
-      setIncome(income + amountNumber);
+    if (newTransaction.transactionType === 'income') {
+      newBalance = currentBalance + amount;
+      incomeAmount = `$${amount.toFixed(2)}`;
     } else {
-      setExpenses(expenses + amountNumber);
+      newBalance = currentBalance - amount;
+      expenseAmount = `$${amount.toFixed(2)}`;
     }
 
+    const transaction: Transaction = {
+      id: Date.now().toString(),
+      date: newTransaction.date,
+      item: newTransaction.item,
+      income: incomeAmount,
+      expense: expenseAmount,
+      balance: `$${newBalance.toFixed(2)}`
+    };
+
+    setTransactionData([...transactionData, transaction]);
+
     // Reset form
-    setDescription('');
-    setAmount('');
+    setNewTransaction({
+      date: new Date().toISOString().split('T')[0],
+      item: '',
+      transactionType: 'income',
+      amount: ''
+    });
+
+    // Close dialog
+    setOpen(false);
   };
 
+  // Delete transaction
+  const handleDeleteTransaction = (id: string) => {
+    const updatedTransactions = transactionData.filter(transaction => transaction.id !== id);
+
+    // Recalculate balances
+    let balance = 0;
+    const recalculatedTransactions = updatedTransactions.map((transaction, index) => {
+      const income = parseFloat(transaction.income.replace('$', '')) || 0;
+      const expense = parseFloat(transaction.expense.replace('$', '')) || 0;
+
+      balance = balance + income - expense;
+
+      return {
+        ...transaction,
+        balance: `$${balance.toFixed(2)}`
+      };
+    });
+
+    setTransactionData(recalculatedTransactions);
+  };
+
+  const exportToExcel = () => {
+    const dataForExport = transactionData.map(({ id, ...rest }) => rest);
+    const ws = XLSX.utils.json_to_sheet(dataForExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    XLSX.writeFile(wb, "transactions.xlsx");
+  };
 
   return (
     <div className="min-h-screen p-4">
@@ -104,32 +159,6 @@ const DashboardPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Card */}
-      {/* <div className='flex gap-4 justify-center'>
-        <Card className="w-[260px] bg-[#00A86B] p-4 rounded-2xl shadow-lg">
-          <div className="flex items-center space-x-4">
-            <div className="bg-white h-10 w-10 rounded-lg flex items-center justify-center shadow-md">
-              <CiBitcoin className="text-[#00A86B] text-2xl" />
-            </div>
-            <CardHeader className="p-0">
-              <CardTitle className="text-white text-lg font-semibold">Income</CardTitle>
-              <CardDescription className="text-white text-2xl font-bold">$</CardDescription>
-            </CardHeader>
-          </div>
-        </Card>
-        <Card className="w-[260px] bg-red-500 p-4 rounded-2xl shadow-lg">
-          <div className="flex items-center space-x-4">
-            <div className="bg-white h-10 w-10 rounded-lg flex items-center justify-center shadow-md">
-              <CiBitcoin className="text-red-500 text-2xl" />
-            </div>
-            <CardHeader className="p-0">
-              <CardTitle className="text-white text-lg font-semibold">Expenses</CardTitle>
-              <CardDescription className="text-white text-2xl font-bold">$</CardDescription>
-            </CardHeader>
-          </div>
-        </Card>
-      </div> */}
-
       {/* Text */}
       <div className='mt-5 text-xl flex justify-center font-bold'>ระบบบันทึกบัญชี รายรับ - รายจ่าย</div>
 
@@ -138,9 +167,9 @@ const DashboardPage: React.FC = () => {
         <input
           type="text"
           placeholder="ค้นหา"
-          className="border rounded p-2 h-10 w-[400px]"
+          className="border rounded p-2 h-10 w-[490px]"
         />
-        <Select onValueChange={(value) => setTransactionType(value as 'income' | 'expense')}>
+        <Select>
           <SelectTrigger className="w-[180px] h-10">
             <SelectValue placeholder="เลือกประเภท" />
           </SelectTrigger>
@@ -162,29 +191,95 @@ const DashboardPage: React.FC = () => {
           className="border rounded p-2 h-10"
         />
       </div>
-      <hr className="w-3/4  border-gray-300 my-4 mx-auto" />
+      <hr className="w-3/4 border-gray-300 my-4 mx-auto" />
 
       {/* Button */}
       <div className="flex justify-end w-3/4 mx-auto">
-        <Button variant="facebook" size="default">
-          เพิ่มข้อมูลรายรับ - รายจ่าย
-        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="facebook" size="default">
+              เพิ่มข้อมูลรายรับ - รายจ่าย
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>เพิ่มข้อมูลรายรับ - รายจ่าย</DialogTitle>
+              <DialogDescription>
+                กรอกข้อมูลรายรับหรือรายจ่ายที่ต้องการบันทึก
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">
+                  วันที่
+                </Label>
+                <Input
+                  id="date"
+                  name="date"
+                  type="date"
+                  value={newTransaction.date}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item" className="text-right">
+                  รายการ
+                </Label>
+                <Input
+                  id="item"
+                  name="item"
+                  placeholder="รายละเอียดรายการ"
+                  value={newTransaction.item}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 ">
+                <Label htmlFor="transactionType" className="text-right">
+                  ประเภท
+                </Label>
+                <Select
+                  value={newTransaction.transactionType}
+                  onValueChange={handleTransactionTypeChange}
+                >
+                  <SelectTrigger className="col-span-3 w-full">
+                    <SelectValue placeholder="เลือกประเภท" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="income">รายรับ</SelectItem>
+                      <SelectItem value="expense">รายจ่าย</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">
+                  จำนวนเงิน
+                </Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={newTransaction.amount}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" variant="line" className='w-full' onClick={handleAddTransaction}>
+                บันทึกข้อมูล
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Button variant="black" size="default" className='ml-2' onClick={exportToExcel}>
           Export Excel
         </Button>
       </div>
-
-      {/* Dialog */}
-      <Dialog>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Export Successful</DialogTitle>
-            <DialogDescription>
-              The transactions have been successfully exported to an Excel file.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
 
       {/* Table */}
       <Table className='w-3/4 mx-auto mt-5'>
@@ -200,15 +295,19 @@ const DashboardPage: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactionData.map((transaction, index) => (
-            <TableRow key={index}>
+          {transactionData.map((transaction) => (
+            <TableRow key={transaction.id}>
               <TableCell className="text-center">{transaction.date}</TableCell>
               <TableCell className="text-center">{transaction.item}</TableCell>
               <TableCell className="text-center">{transaction.income}</TableCell>
               <TableCell className="text-center">{transaction.expense}</TableCell>
               <TableCell className="text-center">{transaction.balance}</TableCell>
               <TableCell className="text-center">
-                <Button variant="danger" size="default">
+                <Button
+                  variant="danger"
+                  size="default"
+                  onClick={() => handleDeleteTransaction(transaction.id)}
+                >
                   Delete
                 </Button>
               </TableCell>

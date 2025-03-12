@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tabs": "^1.1.3",
     "@tabler/icons": "^3.31.0",
     "@tailwindcss/vite": "^4.0.12",
     "class-variance-authority": "^0.7.1",
@@ -42,5 +44,18 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0"
-  }
+  },
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tatoei/exam-vonder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tatoei/exam-vonder/issues"
+  },
+  "homepage": "https://github.com/tatoei/exam-vonder#readme"
 }
