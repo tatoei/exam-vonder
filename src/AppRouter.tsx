@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { Route, Routes, Navigate } from "react-router-dom";
 import DashboardPage from "./pages/dashboard/page";
 import Login from "./pages/login/page";
+import App from "./App";
+import Dashboard from "./pages/Dashboard";
 
 
 interface RouteType {
@@ -13,10 +15,15 @@ interface RouteType {
 }
 
 const routes: RouteType[] = [
+  // {
+  //   path: "",
+  //   element: <Navigate to="/Login" />,
+  //   index: true,
+  // },
   {
-    path: "",
-    element: <Navigate to="/Login" />,
-    index: true,
+    path: "/",
+    element: <Dashboard />,
+    children: [],
   },
   {
     path: "/Dashboard",

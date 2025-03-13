@@ -1,16 +1,18 @@
 import { Button } from '@/components/ui/button';
+// import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import React, { useState, useEffect } from 'react';
+// import { CiBitcoin } from "react-icons/ci";
 import * as XLSX from "xlsx";
+import { expenseApi } from '@/lib/api';
+import { Expense } from '@/types';
+
 
 // Types
 interface Transaction {
-  id: string;
+  _id: string;
   date: string;
   item: string;
   income: string;
@@ -28,25 +30,8 @@ interface TransactionSummary {
 }
 
 const DashboardPage: React.FC = () => {
-  const [transactionData, setTransactionData] = useState<Transaction[]>([
-    {
-      id: "1",
-      date: "01/01/2025",
-      item: "รายรับจากการขาย",
-      income: "$500.00",
-      expense: "$0.00",
-      balance: "$500.00"
-    },
-    {
-      id: "2",
-      date: "02/01/2025",
-      item: "ค่าใช้จ่ายการซื้อสินค้า",
-      income: "$0.00",
-      expense: "$200.00",
-      balance: "$300.00"
-    }
-  ]);
-
+  const [transactionData, setTransactionData] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [open, setOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -54,7 +39,7 @@ const DashboardPage: React.FC = () => {
     transactionType: 'income',
     amount: ''
   });
-  const [userName, setUserName] = useState<string>('Sararawee');
+  const [userName] = useState<string>('Sararawee');
   const [summary, setSummary] = useState<TransactionSummary>({
     totalIncome: 0,
     totalExpense: 0,
@@ -63,19 +48,89 @@ const DashboardPage: React.FC = () => {
     averageTransaction: 0,
     lastTransactionDate: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Fetch transactions from API
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await expenseApi.getAll();
+        const expenses = response.data.data;
+        const transactions: Transaction[] = expenses.map((expense: Expense) => ({
+          _id: expense._id,
+          date: expense.date,
+          item: expense.item,
+          income: expense.transactionType === 'income' ? `฿${expense.amount}` : '฿0',
+          expense: expense.transactionType === 'expense' ? `฿${expense.amount}` : '฿0',
+          balance: `฿${expense.amount}`
+        }));
+        setTransactionData(transactions);
+        setFilteredTransactions(transactions);
+      } catch (err) {
+        setError('Failed to fetch transactions');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  // Filter transactions
+  useEffect(() => {
+    let filtered = [...transactionData];
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(transaction =>
+        transaction.item.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by type
+    if (filterType !== 'all') {
+      filtered = filtered.filter(transaction => {
+        if (filterType === 'income') {
+          return transaction.income !== '฿0';
+        } else {
+          return transaction.expense !== '฿0';
+        }
+      });
+    }
+
+    // Filter by date range
+    if (startDate && endDate) {
+      filtered = filtered.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        return transactionDate >= start && transactionDate <= end;
+      });
+    }
+
+    setFilteredTransactions(filtered);
+  }, [searchTerm, filterType, startDate, endDate, transactionData]);
 
   // Calculate summary data
   useEffect(() => {
     const calculateSummary = () => {
       let totalIncome = 0;
       let totalExpense = 0;
-      let transactionCount = transactionData.length;
-      let lastTransactionDate = transactionData.length > 0 ?
-        transactionData[transactionData.length - 1].date : '';
+      const transactionCount = filteredTransactions.length;
+      const lastTransactionDate = filteredTransactions.length > 0 ?
+        filteredTransactions[filteredTransactions.length - 1].date : '';
 
-      transactionData.forEach(transaction => {
-        totalIncome += parseFloat(transaction.income.replace('$', '')) || 0;
-        totalExpense += parseFloat(transaction.expense.replace('$', '')) || 0;
+      filteredTransactions.forEach(transaction => {
+        totalIncome += parseFloat(transaction.income.replace('฿', '')) || 0;
+        totalExpense += parseFloat(transaction.expense.replace('฿', '')) || 0;
       });
 
       const netBalance = totalIncome - totalExpense;
@@ -93,14 +148,7 @@ const DashboardPage: React.FC = () => {
     };
 
     calculateSummary();
-  }, [transactionData]);
-
-  // Calculate current balance
-  const getCurrentBalance = (): number => {
-    if (transactionData.length === 0) return 0;
-    const lastTransaction = transactionData[transactionData.length - 1];
-    return parseFloat(lastTransaction.balance.replace('$', ''));
-  };
+  }, [filteredTransactions]);
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,78 +168,69 @@ const DashboardPage: React.FC = () => {
   };
 
   // Add new transaction
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (!newTransaction.item || !newTransaction.amount || isNaN(Number(newTransaction.amount))) {
       alert('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง');
       return;
     }
 
-    const currentBalance = getCurrentBalance();
-    const amount = parseFloat(newTransaction.amount);
+    try {
+      const response = await expenseApi.create({
+        date: newTransaction.date,
+        item: newTransaction.item,
+        transactionType: newTransaction.transactionType,
+        amount: Number(newTransaction.amount)
+      });
 
-    let newBalance: number;
-    let incomeAmount = "$0.00";
-    let expenseAmount = "$0.00";
+      const newExpense = response.data.data;
+      const newTransactionData: Transaction = {
+        _id: newExpense._id,
+        date: newExpense.date,
+        item: newExpense.item,
+        income: newExpense.transactionType === 'income' ? `฿${newExpense.amount}` : '฿0',
+        expense: newExpense.transactionType === 'expense' ? `฿${newExpense.amount}` : '฿0',
+        balance: `฿${newExpense.amount}`
+      };
 
-    if (newTransaction.transactionType === 'income') {
-      newBalance = currentBalance + amount;
-      incomeAmount = `$${amount.toFixed(2)}`;
-    } else {
-      newBalance = currentBalance - amount;
-      expenseAmount = `$${amount.toFixed(2)}`;
+      setTransactionData([...transactionData, newTransactionData]);
+
+      // Reset form
+      setNewTransaction({
+        date: new Date().toISOString().split('T')[0],
+        item: '',
+        transactionType: 'income',
+        amount: ''
+      });
+
+      // Close dialog
+      setOpen(false);
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      console.error(err);
     }
-
-    const transaction: Transaction = {
-      id: Date.now().toString(),
-      date: newTransaction.date,
-      item: newTransaction.item,
-      income: incomeAmount,
-      expense: expenseAmount,
-      balance: `$${newBalance.toFixed(2)}`
-    };
-
-    setTransactionData([...transactionData, transaction]);
-
-    // Reset form
-    setNewTransaction({
-      date: new Date().toISOString().split('T')[0],
-      item: '',
-      transactionType: 'income',
-      amount: ''
-    });
-
-    // Close dialog
-    setOpen(false);
   };
 
   // Delete transaction
-  const handleDeleteTransaction = (id: string) => {
-    const updatedTransactions = transactionData.filter(transaction => transaction.id !== id);
-
-    // Recalculate balances
-    let balance = 0;
-    const recalculatedTransactions = updatedTransactions.map((transaction, index) => {
-      const income = parseFloat(transaction.income.replace('$', '')) || 0;
-      const expense = parseFloat(transaction.expense.replace('$', '')) || 0;
-
-      balance = balance + income - expense;
-
-      return {
-        ...transaction,
-        balance: `$${balance.toFixed(2)}`
-      };
-    });
-
-    setTransactionData(recalculatedTransactions);
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await expenseApi.delete(id);
+      setTransactionData(transactionData.filter(transaction => transaction._id !== id));
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+      console.error(err);
+    }
   };
 
   const exportToExcel = () => {
-    const dataForExport = transactionData.map(({ id, ...rest }) => rest);
+    const dataForExport = filteredTransactions.map(({ _id, ...rest }) => rest);
     const ws = XLSX.utils.json_to_sheet(dataForExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Transactions");
     XLSX.writeFile(wb, "transactions.xlsx");
   };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="min-h-screen p-4">
@@ -218,7 +257,7 @@ const DashboardPage: React.FC = () => {
             <CardTitle className="text-lg text-green-700">รายรับทั้งหมด</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            <p className="text-2xl font-bold text-green-600">${summary.totalIncome.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-600">฿{summary.totalIncome.toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -227,7 +266,7 @@ const DashboardPage: React.FC = () => {
             <CardTitle className="text-lg text-red-700">รายจ่ายทั้งหมด</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            <p className="text-2xl font-bold text-red-600">${summary.totalExpense.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-red-600">฿{summary.totalExpense.toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -237,7 +276,7 @@ const DashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="pt-4">
             <p className={`text-2xl font-bold ${summary.netBalance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-              ${summary.netBalance.toFixed(2)}
+              ฿{summary.netBalance.toLocaleString()}
             </p>
           </CardContent>
         </Card>
@@ -257,15 +296,18 @@ const DashboardPage: React.FC = () => {
         <input
           type="text"
           placeholder="ค้นหา"
-          className="border rounded p-2 h-10 w-[490px]"
+          className="border rounded p-2 h-10 w-[400px]"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <Select>
+        <Select value={filterType} onValueChange={(value) => setFilterType(value as 'all' | 'income' | 'expense')}>
           <SelectTrigger className="w-[180px] h-10">
             <SelectValue placeholder="เลือกประเภท" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectLabel>ประเภท</SelectLabel>
+              <SelectItem value="all">ทั้งหมด</SelectItem>
               <SelectItem value="income">รายรับ</SelectItem>
               <SelectItem value="expense">รายจ่าย</SelectItem>
             </SelectGroup>
@@ -274,11 +316,15 @@ const DashboardPage: React.FC = () => {
         <input
           type="date"
           className="border rounded p-2 h-10"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
         />
         <span>To</span>
         <input
           type="date"
           className="border rounded p-2 h-10"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
         />
       </div>
       <hr className="w-3/4 border-gray-300 my-4 mx-auto" />
@@ -385,8 +431,8 @@ const DashboardPage: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactionData.map((transaction) => (
-            <TableRow key={transaction.id}>
+          {filteredTransactions.map((transaction) => (
+            <TableRow key={transaction._id}>
               <TableCell className="text-center">{transaction.date}</TableCell>
               <TableCell className="text-center">{transaction.item}</TableCell>
               <TableCell className="text-center">{transaction.income}</TableCell>
@@ -396,7 +442,7 @@ const DashboardPage: React.FC = () => {
                 <Button
                   variant="danger"
                   size="default"
-                  onClick={() => handleDeleteTransaction(transaction.id)}
+                  onClick={() => handleDeleteTransaction(transaction._id)}
                 >
                   Delete
                 </Button>
