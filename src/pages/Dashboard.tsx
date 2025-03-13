@@ -88,8 +88,8 @@ export default function Dashboard() {
                         <TableBody>
                             {expenses.slice(0, 5).map((expense) => (
                                 <TableRow key={expense._id}>
-                                    <TableCell>{expense.item}</TableCell>
-                                    <TableCell>{expense.transactionType}</TableCell>
+                                    <TableCell>{expense.title}</TableCell>
+                                    <TableCell>{expense.category}</TableCell>
                                     <TableCell>฿{expense.amount.toLocaleString()}</TableCell>
                                     <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
                                 </TableRow>
